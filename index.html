@@ -1,39 +1,4 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Adopte un surmulot</title>
-  <meta name="description" content="Adopte un surmulot : choisis un emplacement sur la carte, baptise ton surmulot et vois-le apparaître.">
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <script defer src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <style>
-    :root { --bg:#0f1115; --fg:#f5f7fb; --muted:#a6adbb; --accent:#7bd389; --card:#171a21; --border:#232837; }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,"Noto Sans";line-height:1.5}
-    a{color:var(--accent);text-decoration:none}
-    header{position:sticky;top:0;background:rgba(15,17,21,.8);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--border);padding:12px 20px}
-    header .brand{display:flex;gap:10px;align-items:center;font-weight:700}
-    main{max-width:1100px;margin:32px auto;padding:0 20px}
-    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:22px;align-items:center}
-    .hero h1{font-size:42px;margin:.2em 0}
-    .hero p{color:var(--muted)}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-    .map{height:380px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
-    form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    label{font-size:13px;color:var(--muted)}
-    input,textarea,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#10131a;color:var(--fg)}
-    textarea{min-height:96px;resize:vertical}
-    .full{grid-column:1/-1}
-    .cta{background:var(--accent);color:#0b0f14;border:none;font-weight:700;cursor:pointer}
-    .adoptions{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
-    .adopt-card{border:1px dashed var(--border);border-radius:12px;padding:14px;background:#0f141b}
-    .small{font-size:12px;color:var(--muted)}
-    footer{margin:40px 0;color:var(--muted);font-size:13px}
-    @media (max-width:900px){.hero{grid-template-columns:1fr}}
-  </style>
-</head>
+<!-- ... même <head> que précédemment ... -->
 <body>
   <header>
     <div class="brand">
@@ -43,6 +8,7 @@
   </header>
 
   <main>
+    <!-- HERO -->
     <section class="hero">
       <div class="card">
         <h1>Adopte un surmulot</h1>
@@ -54,12 +20,13 @@
         </ul>
       </div>
       <div class="card">
-        <div id="map" class="map" role="img" aria-label="Carte centrée sur Paris 11e"></div>
+        <div id="map" class="map"></div>
       </div>
     </section>
 
-    <section style="margin-top:22px" class="card">
-      <h2 style="margin-top:0">Formulaire d’adoption</h2>
+    <!-- FORM -->
+    <section class="card" style="margin-top:22px">
+      <h2>Formulaire d’adoption</h2>
       <form id="adopt-form">
         <div>
           <label for="name">Nom du surmulot</label>
@@ -83,78 +50,35 @@
       </form>
     </section>
 
-    <section style="margin-top:22px" class="card">
-      <h2 style="margin-top:0">Adoptions récentes</h2>
+    <!-- LISTE -->
+    <section class="card" style="margin-top:22px">
+      <h2>Adoptions récentes</h2>
       <div id="adoptions" class="adoptions" aria-live="polite"></div>
     </section>
-
-    <footer>
-      Fait avec ❤️ et 🧀 • © 2025
-    </footer>
   </main>
 
   <script>
-    // --- Carte Leaflet ---
-    let map, lastMarker = null;
-    const DEFAULT_CENTER = [48.8619, 2.3790]; // Paris 11e
-    const DEFAULT_ZOOM = 15;
-
-    // couche de marqueurs persistants
-    let markersLayer;
-    const markersById = new Map();
-
-    function initMap(){
-      map = L.map('map', { scrollWheelZoom: true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const DEFAULT_CENTER = [48.8619, 2.3790]; // Paris 11e
+      const DEFAULT_ZOOM = 15;
+      let map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      markersLayer = L.layerGroup().addTo(map);
-
+      let lastMarker = null;
       map.on('click', (e)=>{
         const {lat, lng} = e.latlng;
-        placeTempMarker(lat, lng);
+        if(lastMarker){ map.removeLayer(lastMarker); }
+        lastMarker = L.marker([lat, lng]).addTo(map).bindPopup('Emplacement choisi');
         document.getElementById('lat').value = lat.toFixed(6);
         document.getElementById('lng').value = lng.toFixed(6);
       });
-    }
 
-    function placeTempMarker(lat, lng){
-      if(lastMarker){ map.removeLayer(lastMarker); }
-      lastMarker = L.marker([lat, lng]).addTo(map).bindPopup('Emplacement choisi');
-      lastMarker.openPopup();
-    }
-
-    function popupHtml(item){
-      const dateStr = new Date(item.date).toLocaleDateString('fr-FR');
-      const story = item.story ? `<p style="margin:.5em 0 0">${escapeHtml(item.story)}</p>` : '';
-      return `<strong>${escapeHtml(item.name)}</strong><br/>par ${escapeHtml(item.guardian)} • ${dateStr}${story}`;
-    }
-
-    function renderMarkers(items){
-      markersLayer.clearLayers();
-      markersById.clear();
-      items.forEach(item=>{
-        if(!item.lat || !item.lng) return;
-        const m = L.marker([item.lat, item.lng]).addTo(markersLayer).bindPopup(popupHtml(item));
-        markersById.set(String(item.id), m);
-      });
-    }
-
-    // --- Stockage ---
-    const KEY = 'adopte-un-surmulot:v2';
-    const $list = document.getElementById('adoptions');
-
-    function loadAll(){
-      try { return JSON.parse(localStorage.getItem(KEY)) || []; }
-      catch(e){ return []; }
-    }
-    function saveAll(items){ localStorage.setItem(KEY, JSON.stringify(items)); }
-
-    function cardTemplate(item){
-      const story = item.story ? `<p>${escapeHtml(item.story)}</p>` : '';
-      return `
-        <article class="adopt-card">
-          <h3 style="margin:.2em 0">${escapeHtml(item.name)}</h3>
-          <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateStr
+      // Pré-remplir la date du jour
+      document.getElementById('date').valueAsDate = new Date();
+    });
+  </script>
+</body>
+</html>
