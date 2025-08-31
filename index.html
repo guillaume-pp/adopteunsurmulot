@@ -1,4 +1,35 @@
-<!-- ... même <head> que précédemment ... -->
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Adopte un surmulot</title>
+  <meta name="description" content="Choisis un emplacement sur la carte, baptise ton surmulot et vois-le apparaître parmi les adoptions.">
+  <!-- Leaflet (CSS + JS) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <style>
+    :root { --bg:#0f1115; --fg:#f5f7fb; --muted:#a6adbb; --accent:#7bd389; --card:#171a21; --border:#232837; }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,"Noto Sans";line-height:1.5}
+    header{position:sticky;top:0;background:rgba(15,17,21,.8);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--border);padding:12px 20px}
+    header .brand{display:flex;gap:10px;align-items:center;font-weight:700}
+    main{max-width:1100px;margin:32px auto;padding:0 20px}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:22px;align-items:start}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+    .hero h1{font-size:42px;margin:.2em 0}
+    .hero p, label, .small{color:var(--muted)}
+    #map{height:420px;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+    form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    input,textarea,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#10131a;color:var(--fg)}
+    textarea{min-height:96px;resize:vertical}
+    .full{grid-column:1/-1}
+    .cta{background:var(--accent);color:#0b0f14;border:none;font-weight:700;cursor:pointer}
+    .adoptions{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+    .adopt-card{border:1px dashed var(--border);border-radius:12px;padding:14px;background:#0f141b}
+    footer{margin:40px 0;color:var(--muted);font-size:13px}
+    @media (max-width:900px){.hero{grid-template-columns:1fr}}
+  </style>
+</head>
 <body>
   <header>
     <div class="brand">
@@ -8,25 +39,23 @@
   </header>
 
   <main>
-    <!-- HERO -->
     <section class="hero">
       <div class="card">
         <h1>Adopte un surmulot</h1>
-        <p>Choisis l’endroit sur la carte, baptise ton surmulot et vois-le apparaître parmi les adoptions.</p>
-        <ul>
+        <p>Choisis l’endroit sur la carte, baptise ton surmulot et il apparaîtra dans la liste et sur la carte.</p>
+        <ul class="small" style="margin-top:.6em">
           <li>🗺️ Clique sur la carte pour placer ton surmulot (optionnel)</li>
           <li>📝 Remplis le formulaire</li>
-          <li>✨ Il apparaît dans la liste et sur la carte</li>
+          <li>✨ L’adoption reste visible et se recharge au prochain accès</li>
         </ul>
       </div>
       <div class="card">
-        <div id="map" class="map"></div>
+        <div id="map" role="img" aria-label="Carte centrée sur Paris 11e"></div>
       </div>
     </section>
 
-    <!-- FORM -->
     <section class="card" style="margin-top:22px">
-      <h2>Formulaire d’adoption</h2>
+      <h2 style="margin:0 0 10px 0">Formulaire d’adoption</h2>
       <form id="adopt-form">
         <div>
           <label for="name">Nom du surmulot</label>
@@ -44,41 +73,134 @@
           <label for="date">Date d’adoption</label>
           <input id="date" name="date" type="date" required>
         </div>
-        <input type="hidden" id="lat">
-        <input type="hidden" id="lng">
+        <input type="hidden" id="lat"><input type="hidden" id="lng">
         <button class="cta full" type="submit">Adopter ce surmulot</button>
       </form>
     </section>
 
-    <!-- LISTE -->
     <section class="card" style="margin-top:22px">
-      <h2>Adoptions récentes</h2>
+      <h2 style="margin:0 0 10px 0">Adoptions récentes</h2>
       <div id="adoptions" class="adoptions" aria-live="polite"></div>
     </section>
+
+    <footer>© 2025</footer>
   </main>
 
+  <!-- Charger Leaflet **après** le DOM pour éviter les courses d'init -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', ()=>{
-      const DEFAULT_CENTER = [48.8619, 2.3790]; // Paris 11e
-      const DEFAULT_ZOOM = 15;
-      let map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
-      }).addTo(map);
+  (function(){
+    const DEFAULT_CENTER = [48.8619, 2.3790]; // 11e
+    const DEFAULT_ZOOM = 15;
+    const KEY = 'adopte-un-surmulot:v3';
 
-      let lastMarker = null;
+    let map, lastMarker = null, markersLayer, markersById = new Map();
+
+    // Utilitaires
+    const $ = (id)=>document.getElementById(id);
+    const escapeHtml = (s)=> (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const loadAll = ()=>{ try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{ return [] } };
+    const saveAll = (items)=>localStorage.setItem(KEY, JSON.stringify(items));
+
+    function initMap(){
+      if(!window.L){ console.error('Leaflet non chargé'); return; }
+      map = L.map('map', { scrollWheelZoom:true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
+
+      markersLayer = L.layerGroup().addTo(map);
+
       map.on('click', (e)=>{
-        const {lat, lng} = e.latlng;
-        if(lastMarker){ map.removeLayer(lastMarker); }
-        lastMarker = L.marker([lat, lng]).addTo(map).bindPopup('Emplacement choisi');
-        document.getElementById('lat').value = lat.toFixed(6);
-        document.getElementById('lng').value = lng.toFixed(6);
+        const {lat,lng} = e.latlng;
+        if(lastMarker) map.removeLayer(lastMarker);
+        lastMarker = L.marker([lat,lng]).addTo(map).bindPopup('Emplacement choisi');
+        $('lat').value = lat.toFixed(6);
+        $('lng').value = lng.toFixed(6);
+        lastMarker.openPopup();
       });
+    }
 
-      // Pré-remplir la date du jour
-      document.getElementById('date').valueAsDate = new Date();
+    function popupHtml(item){
+      const story = item.story ? `<p style="margin:.4em 0 0">${escapeHtml(item.story)}</p>` : '';
+      return `<strong>${escapeHtml(item.name)}</strong><br/>par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}${story}`;
+    }
+
+    function renderMarkers(items){
+      markersLayer.clearLayers(); markersById.clear();
+      items.forEach(item=>{
+        if(item.lat==null || item.lng==null) return;
+        const m = L.marker([item.lat, item.lng]).addTo(markersLayer).bindPopup(popupHtml(item));
+        markersById.set(String(item.id), m);
+      });
+    }
+
+    function card(item){
+      const story = item.story ? `<p>${escapeHtml(item.story)}</p>` : '';
+      return `
+      <article class="adopt-card">
+        <h3 style="margin:.2em 0">${escapeHtml(item.name)}</h3>
+        <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}</p>
+        ${story}
+        <button data-jump="${item.id}" style="margin-top:8px">Voir sur la carte</button>
+      </article>`;
+    }
+
+    function renderList(items){
+      const $list = $('adoptions');
+      $list.innerHTML = items.length ? items.slice().sort((a,b)=>b.id-a.id).map(card).join('') : '<p class="small">Aucune adoption pour le moment…</p>';
+      $list.onclick = (e)=>{
+        const btn = e.target.closest('button[data-jump]'); if(!btn) return;
+        const m = markersById.get(btn.dataset.jump);
+        if(m){ map.setView(m.getLatLng(), 16); m.openPopup(); }
+      };
+    }
+
+    function initForm(){
+      const $form = $('adopt-form');
+      // Date du jour par défaut
+      $('date').valueAsDate = new Date();
+
+      $form.addEventListener('submit', (ev)=>{
+        ev.preventDefault();
+        const fd = new FormData($form);
+        // fallback centre carte si pas de clic
+        let lat = fd.get('lat'), lng = fd.get('lng');
+        if(!lat || !lng){
+          const c = map.getCenter();
+          lat = c.lat.toFixed(6); lng = c.lng.toFixed(6);
+        }
+        const item = {
+          id: Date.now(),
+          name: fd.get('name').trim(),
+          guardian: fd.get('guardian').trim(),
+          story: (fd.get('story')||'').trim(),
+          date: fd.get('date'),
+          lat: parseFloat(lat),
+          lng: parseFloat(lng)
+        };
+        const items = loadAll(); items.push(item); saveAll(items);
+        renderList(items); renderMarkers(items);
+
+        // focus & popup
+        const m = markersById.get(String(item.id));
+        if(m){ map.setView(m.getLatLng(), 16); m.openPopup(); }
+
+        // reset propre
+        $form.reset(); $('date').valueAsDate = new Date(); $('lat').value=''; $('lng').value='';
+        if(lastMarker){ map.removeLayer(lastMarker); lastMarker=null; }
+      });
+    }
+
+    // Boot
+    window.addEventListener('load', ()=>{
+      initMap();
+      initForm();
+      const items = loadAll();
+      renderList(items);
+      renderMarkers(items);
+      // petit fix si la carte est dans un conteneur flex: trigger resize
+      setTimeout(()=>{ map.invalidateSize(); }, 50);
     });
+  })();
   </script>
 </body>
 </html>
