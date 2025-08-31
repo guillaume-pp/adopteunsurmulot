@@ -32,12 +32,26 @@
       <div class="card">
         <h1>Adopte un surmulot</h1>
         <p>Choisis un endroit sur la carte, baptise ton surmulot et il apparaîtra pour tout le monde.</p>
-        <form id="adopt-form">
-          <label>Nom du surmulot<input id="name" name="name" required></label>
-          <label>Ton prénom<input id="guardian" name="guardian" required></label>
-          <label>Petite histoire<textarea id="story" name="story"></textarea></label>
-          <label>Date d’adoption<input id="date" name="date" type="date" required></label>
-          <input type="hidden" id="lat"><input type="hidden" id="lng">
+        <ul class="small" style="margin-top:.6em">
+          <li>🗺️ Clique sur la carte pour placer ton surmulot (optionnel)</li>
+          <li>📝 Remplis le formulaire ci-dessous</li>
+          <li>✨ Ton adoption reste visible et partagée</li>
+        </ul>
+        <form id="adopt-form" style="margin-top:18px">
+          <label>Nom du surmulot
+            <input id="name" name="name" required placeholder="Ex. Frometon">
+          </label>
+          <label>Ton prénom
+            <input id="guardian" name="guardian" required placeholder="Ex. Guillaume">
+          </label>
+          <label>Petite histoire
+            <textarea id="story" name="story" placeholder="Ex. Rencontré près d’un square, adore les croissants secs."></textarea>
+          </label>
+          <label>Date d’adoption
+            <input id="date" name="adoption_date" type="date" required>
+          </label>
+          <input type="hidden" id="lat" name="lat">
+          <input type="hidden" id="lng" name="lng">
           <button class="cta" type="submit">Adopter ce surmulot 🐀</button>
         </form>
       </div>
@@ -55,22 +69,20 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
   (function(){
-    // Supabase config
-    const SUPABASE_URL = "https://TONPROJET.supabase.co"; // remplace
-    const SUPABASE_ANON_KEY = "TON_ANON_KEY";             // remplace
+    const SUPABASE_URL = "https://TONPROJET.supabase.co";   // à remplacer
+    const SUPABASE_ANON_KEY = "TON_ANON_KEY";               // à remplacer
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Map
     const DEFAULT_CENTER = [48.8619, 2.3790], DEFAULT_ZOOM = 15;
     let map, lastMarker=null, markersLayer, markersById=new Map();
 
-    // Icône emoji 🐀
+    // Icône emoji 🐀 plus grande
     const EmojiIcon = L.divIcon({
-      html: "🐀",
+      html: "<div style='font-size:48px'>🐀</div>",
       className: "",
-      iconSize: [30,30],
-      iconAnchor: [15,28],
-      popupAnchor: [0,-25]
+      iconSize: [48,48],
+      iconAnchor: [24,42],
+      popupAnchor: [0,-36]
     });
 
     function initMap(){
@@ -87,18 +99,18 @@
     }
 
     const $=id=>document.getElementById(id);
-    const escapeHtml=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    const escapeHtml=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
     function popupHtml(item){
       const story=item.story?`<p>${escapeHtml(item.story)}</p>`:"";
-      return `<b>${escapeHtml(item.name)}</b><br/>par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}${story}`;
+      return `<b>${escapeHtml(item.name)}</b><br/>par ${escapeHtml(item.guardian)} • ${new Date(item.adoption_date).toLocaleDateString('fr-FR')}${story}`;
     }
 
     function card(item){
       const story=item.story?`<p>${escapeHtml(item.story)}</p>`:"";
       return `<article class="adopt-card">
         <h3>${escapeHtml(item.name)}</h3>
-        <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}</p>
+        <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.adoption_date).toLocaleDateString('fr-FR')}</p>
         ${story}
         <button data-jump="${item.id}">Voir sur la carte</button>
       </article>`;
@@ -134,7 +146,7 @@
           name:fd.get("name").trim(),
           guardian:fd.get("guardian").trim(),
           story:(fd.get("story")||"").trim(),
-          date:fd.get("date"),
+          adoption_date:fd.get("adoption_date"),
           lat:parseFloat(lat), lng:parseFloat(lng)
         };
         await saveOne(item);
