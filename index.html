@@ -152,8 +152,9 @@
           name: fd.get("name").trim(),
           guardian: fd.get("guardian").trim(),
           story: (fd.get("story")||"").trim(),
-          adoption_date: fd.get("adoption_date"),
-          lat: parseFloat(lat), lng: parseFloat(lng)
+          adoption_date: fd.get("adoption_date"),   // ⚠️ correspond à la colonne adoption_date
+          lat: parseFloat(lat),
+          lng: parseFloat(lng)
         };
         await saveOne(item);
         // Notre propre insert sera aussi capté par Realtime;
