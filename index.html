@@ -5,13 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Adopte un surmulot</title>
   <meta name="description" content="Choisis un emplacement sur la carte, baptise ton surmulot et vois-le apparaître parmi les adoptions.">
-  <!-- Leaflet (CSS + JS) -->
+
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <style>
-    :root { --bg:#0f1115; --fg:#f5f7fb; --muted:#a6adbb; --accent:#7bd389; --card:#171a21; --border:#232837; }
+    :root { --bg:#0f1115; --fg:#f5f7fb; --muted:#a6adbb; --accent:#ff6fb5; --card:#171a21; --border:#232837; }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,"Noto Sans";line-height:1.5}
-    header{position:sticky;top:0;background:rgba(15,17,21,.8);backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--border);padding:12px 20px}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial,"Noto Sans";line-height:1.5}
+    header{position:sticky;top:0;background:rgba(15,17,21,.8);backdrop-filter:saturate(140%) blur(8px);
+      border-bottom:1px solid var(--border);padding:12px 20px}
     header .brand{display:flex;gap:10px;align-items:center;font-weight:700}
     main{max-width:1100px;margin:32px auto;padding:0 20px}
     .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:22px;align-items:start}
@@ -46,7 +49,7 @@
         <ul class="small" style="margin-top:.6em">
           <li>🗺️ Clique sur la carte pour placer ton surmulot (optionnel)</li>
           <li>📝 Remplis le formulaire</li>
-          <li>✨ L’adoption reste visible et se recharge au prochain accès</li>
+          <li>✨ L’adoption reste visible pour tout le monde (stockée sur Supabase)</li>
         </ul>
       </div>
       <div class="card">
@@ -86,119 +89,178 @@
     <footer>© 2025</footer>
   </main>
 
-  <!-- Charger Leaflet **après** le DOM pour éviter les courses d'init -->
+  <!-- Libraries -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <script>
   (function(){
-    const DEFAULT_CENTER = [48.8619, 2.3790]; // 11e
+    // ---------- CONFIG SUPABASE ----------
+    const SUPABASE_URL = "https://YOUR-PROJECT-ref.supabase.co";      // <- remplace
+    const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";                  // <- remplace
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ---------- MAP ----------
+    const DEFAULT_CENTER = [48.8619, 2.3790]; // Paris 11e
     const DEFAULT_ZOOM = 15;
-    const KEY = 'adopte-un-surmulot:v3';
 
     let map, lastMarker = null, markersLayer, markersById = new Map();
 
-    // Utilitaires
-    const $ = (id)=>document.getElementById(id);
-    const escapeHtml = (s)=> (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const loadAll = ()=>{ try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{ return [] } };
-    const saveAll = (items)=>localStorage.setItem(KEY, JSON.stringify(items));
+    // Icône "surmulot rose"
+    const RAT_ICON = L.icon({
+      iconUrl:
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="16" fill="#ff6fb5"/>
+            <circle cx="12" cy="16" r="3" fill="#fff"/>
+            <circle cx="24" cy="16" r="3" fill="#fff"/>
+            <circle cx="13" cy="16" r="1.3" fill="#000"/>
+            <circle cx="23" cy="16" r="1.3" fill="#000"/>
+            <path d="M12 23c2.5 1.5 9.5 1.5 12 0" stroke="#000" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M6 18c0-7 8-12 12-12s12 5 12 12" fill="none" stroke="#ff3fa1" stroke-width="2" opacity=".6"/>
+            <path d="M27 24c4 0 5 3 3 5" stroke="#ff3fa1" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+        `),
+      iconSize: [36, 36],
+      iconAnchor: [18, 30],
+      popupAnchor: [0, -28]
+    });
 
     function initMap(){
-      if(!window.L){ console.error('Leaflet non chargé'); return; }
       map = L.map('map', { scrollWheelZoom:true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
 
       markersLayer = L.layerGroup().addTo(map);
 
       map.on('click', (e)=>{
-        const {lat,lng} = e.latlng;
+        const {lat, lng} = e.latlng;
         if(lastMarker) map.removeLayer(lastMarker);
-        lastMarker = L.marker([lat,lng]).addTo(map).bindPopup('Emplacement choisi');
-        $('lat').value = lat.toFixed(6);
-        $('lng').value = lng.toFixed(6);
+        lastMarker = L.marker([lat, lng], { icon: RAT_ICON }).addTo(map).bindPopup('Emplacement choisi');
+        document.getElementById('lat').value = lat.toFixed(6);
+        document.getElementById('lng').value = lng.toFixed(6);
         lastMarker.openPopup();
       });
     }
+
+    // ---------- UI helpers ----------
+    const $ = (id)=>document.getElementById(id);
+    const escapeHtml = (s)=> (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     function popupHtml(item){
       const story = item.story ? `<p style="margin:.4em 0 0">${escapeHtml(item.story)}</p>` : '';
       return `<strong>${escapeHtml(item.name)}</strong><br/>par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}${story}`;
     }
 
-    function renderMarkers(items){
-      markersLayer.clearLayers(); markersById.clear();
-      items.forEach(item=>{
-        if(item.lat==null || item.lng==null) return;
-        const m = L.marker([item.lat, item.lng]).addTo(markersLayer).bindPopup(popupHtml(item));
-        markersById.set(String(item.id), m);
-      });
-    }
-
     function card(item){
       const story = item.story ? `<p>${escapeHtml(item.story)}</p>` : '';
       return `
-      <article class="adopt-card">
-        <h3 style="margin:.2em 0">${escapeHtml(item.name)}</h3>
-        <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}</p>
-        ${story}
-        <button data-jump="${item.id}" style="margin-top:8px">Voir sur la carte</button>
-      </article>`;
+        <article class="adopt-card">
+          <h3 style="margin:.2em 0">${escapeHtml(item.name)}</h3>
+          <p class="small">par ${escapeHtml(item.guardian)} • ${new Date(item.date).toLocaleDateString('fr-FR')}</p>
+          ${story}
+          <button data-jump="${item.id}" style="margin-top:8px">Voir sur la carte</button>
+        </article>`;
     }
 
-    function renderList(items){
-      const $list = $('adoptions');
-      $list.innerHTML = items.length ? items.slice().sort((a,b)=>b.id-a.id).map(card).join('') : '<p class="small">Aucune adoption pour le moment…</p>';
-      $list.onclick = (e)=>{
-        const btn = e.target.closest('button[data-jump]'); if(!btn) return;
+    function bindListClicks(){
+      $('adoptions').onclick = (e)=>{
+        const btn = e.target.closest('button[data-jump]');
+        if(!btn) return;
         const m = markersById.get(btn.dataset.jump);
         if(m){ map.setView(m.getLatLng(), 16); m.openPopup(); }
       };
     }
 
+    // ---------- SUPABASE: data ----------
+    async function loadAll(){
+      const { data, error } = await sb.from('adoptions').select('*').order('id', { ascending:false });
+      if(error){ console.error(error); return []; }
+      return data;
+    }
+
+    async function saveOne(item){
+      const { error } = await sb.from('adoptions').insert(item);
+      if(error){ console.error(error); alert("Erreur enregistrement"); }
+    }
+
+    function renderMarkers(items){
+      markersLayer.clearLayers(); markersById.clear();
+      items.forEach(item=>{
+        if(item.lat==null || item.lng==null) return;
+        const m = L.marker([item.lat, item.lng], { icon: RAT_ICON }).addTo(markersLayer).bindPopup(popupHtml(item));
+        markersById.set(String(item.id), m);
+      });
+    }
+
+    function renderList(items){
+      $('adoptions').innerHTML = items.length ? items.map(card).join('') : '<p class="small">Aucune adoption pour le moment…</p>';
+    }
+
+    // ---------- SUBMIT ----------
     function initForm(){
       const $form = $('adopt-form');
       // Date du jour par défaut
       $('date').valueAsDate = new Date();
 
-      $form.addEventListener('submit', (ev)=>{
+      $form.addEventListener('submit', async (ev)=>{
         ev.preventDefault();
         const fd = new FormData($form);
-        // fallback centre carte si pas de clic
-        let lat = fd.get('lat'), lng = fd.get('lng');
-        if(!lat || !lng){
-          const c = map.getCenter();
-          lat = c.lat.toFixed(6); lng = c.lng.toFixed(6);
-        }
+
+        // fallback : centre de la carte si pas de clic
+        let plat = fd.get('lat'), plng = fd.get('lng');
+        if(!plat || !plng){ const c = map.getCenter(); plat = c.lat; plng = c.lng; }
+
         const item = {
-          id: Date.now(),
+          id: Date.now(), // clé "client" simple
           name: fd.get('name').trim(),
           guardian: fd.get('guardian').trim(),
           story: (fd.get('story')||'').trim(),
           date: fd.get('date'),
-          lat: parseFloat(lat),
-          lng: parseFloat(lng)
+          lat: parseFloat(plat),
+          lng: parseFloat(plng)
         };
-        const items = loadAll(); items.push(item); saveAll(items);
+
+        await saveOne(item);
+        const items = await loadAll();
         renderList(items); renderMarkers(items);
 
-        // focus & popup
+        // focus & popup si dispo
         const m = markersById.get(String(item.id));
         if(m){ map.setView(m.getLatLng(), 16); m.openPopup(); }
 
-        // reset propre
+        // reset
         $form.reset(); $('date').valueAsDate = new Date(); $('lat').value=''; $('lng').value='';
         if(lastMarker){ map.removeLayer(lastMarker); lastMarker=null; }
       });
     }
 
-    // Boot
-    window.addEventListener('load', ()=>{
+    // ---------- Realtime (optionnel mais cool) ----------
+    function initRealtime(){
+      // écoute les nouveaux enregistrements pour mettre à jour instantanément tous les clients
+      sb.channel('adoptions-inserts')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'adoptions' }, async (payload)=>{
+          const row = payload.new;
+          // si déjà présent (toi-même), on ignore
+          if(markersById.has(String(row.id))) return;
+          const items = await loadAll();
+          renderList(items); renderMarkers(items);
+        })
+        .subscribe();
+    }
+
+    // ---------- BOOT ----------
+    window.addEventListener('load', async ()=>{
       initMap();
       initForm();
-      const items = loadAll();
+      bindListClicks();
+      const items = await loadAll();
       renderList(items);
       renderMarkers(items);
-      // petit fix si la carte est dans un conteneur flex: trigger resize
-      setTimeout(()=>{ map.invalidateSize(); }, 50);
+      setTimeout(()=>{ map.invalidateSize(); }, 60);
+      initRealtime();
     });
   })();
   </script>
