@@ -8,41 +8,130 @@
   <!-- Favicon RAT -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐀</text></svg>">
 
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
   <style>
+    /* ====== Thème (nouvelles couleurs) ====== */
     :root{
-      --bg:#0c0f14; --panel:#121722; --panel-2:#0f141e;
-      --fg:#eaf0ff; --muted:#9aa5b2; --border:#1f2633;
-      --accent:#ff6fb5; --accent-2:#ff92c7;
-      --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --bg-start:#0b0f17; --bg-end:#0e1524;
+      --panel:#121a2b; --panel-2:#0f1726;
+      --fg:#e8efff; --muted:#9fb0c9;
+      --border:#21304a; --border-soft:#1a2740;
+      --accent:#ff6fb5; --accent-2:#ff9fd0; --accent-3:#ffc7e6;
+      --ok:#7be3ac; --err:#ff8a8a;
+      --radius:18px; --shadow:0 14px 35px rgba(0,0,0,.35);
     }
-    html,body{margin:0;background:#0c0f14;color:var(--fg);font-family:Inter,system-ui,Segoe UI,Roboto,Ubuntu,Arial}
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      color:var(--fg);
+      font-family:Inter, system-ui, Segoe UI, Roboto, Ubuntu, Arial;
+      background:radial-gradient(1200px 700px at 20% -10%, #182136 0%, transparent 60%),
+                 radial-gradient(1000px 700px at 120% 10%, #1a2440 0%, transparent 55%),
+                 linear-gradient(180deg, var(--bg-start), var(--bg-end));
+      -webkit-font-smoothing:antialiased;
+    }
+
+    a{color:var(--accent);text-decoration:none}
     h1,h2{letter-spacing:.2px}
-    h1{font-size:40px;margin:.1em 0 .2em}
+    h1{font-size:42px;margin:.2em 0 .3em}
     h2{font-size:22px;margin:0 0 .6em}
-    header{position:sticky;top:0;z-index:10;background:rgba(12,15,20,.7);backdrop-filter:blur(10px) saturate(140%);border-bottom:1px solid var(--border)}
-    .nav{display:flex;align-items:center;gap:12px;padding:14px 20px;font-weight:700;font-size:18px}
-    .nav span.logo{font-size:22px;margin-right:6px}
-    .container{max-width:1280px;margin:28px auto;padding:0 20px}
-    .grid{display:grid;grid-template-columns: minmax(320px,7fr) minmax(320px,5fr);gap:24px;align-items:start}
-    @media(max-width:980px){.grid{grid-template-columns:1fr}h1{font-size:32px}}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
-    .card .inner{padding:18px}
     .subtle{color:var(--muted)}
-    #map{height:64vh;min-height:480px;border-radius:calc(var(--radius) - 4px);border:1px solid var(--border);overflow:hidden}
-    .row{display:flex;gap:10px;align-items:center;margin:10px 0 16px}
-    .btn, input, textarea{border:1px solid var(--border);border-radius:12px;background:var(--panel-2);color:var(--fg)}
-    .btn{padding:10px 12px;cursor:pointer;font-weight:700}
-    .btn-primary{background:linear-gradient(180deg,var(--accent)0%,var(--accent-2)100%);color:#120a12;border:none}
-    form{display:grid;grid-template-columns:1fr;gap:12px}
-    label{font-size:13px;color:var(--muted)}
-    input,textarea{width:100%;padding:14px 12px;font-size:15px}
-    textarea{min-height:120px;resize:vertical}
-    .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-    .adopt{background:var(--panel-2);border:1px dashed var(--border);border-radius:14px;padding:14px}
-    .adopt h3{margin:.2em 0;font-size:18px}
-    .meta{font-size:12px;color:var(--muted)}
-    footer{margin:40px 0;color:#9aa5b2;text-align:center}
+
+    /* Header */
+    header{
+      position:sticky;top:0;z-index:10;
+      background:rgba(13,19,34,.7);
+      backdrop-filter:blur(10px) saturate(140%);
+      border-bottom:1px solid var(--border);
+    }
+    .nav{
+      display:flex;align-items:center;gap:12px;
+      padding:14px 20px;font-weight:800;font-size:18px;
+    }
+    .logo{font-size:22px;margin-right:6px}
+
+    /* Layout */
+    .container{max-width:1280px;margin:28px auto;padding:0 20px}
+    .grid{
+      display:grid;
+      grid-template-columns:minmax(340px, 7fr) minmax(340px,5fr);
+      gap:26px; align-items:start;
+    }
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      h1{font-size:34px}
+    }
+
+    /* Cards */
+    .card{
+      background:linear-gradient(180deg, rgba(27,38,64,.7), rgba(18,26,43,.85));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .card .inner{padding:20px}
+
+    /* Intro block (nouveau) */
+    .intro{
+      background:linear-gradient(180deg, rgba(255,111,181,.09), rgba(255,111,181,0));
+      border:1px solid var(--border-soft);
+      border-radius:14px; padding:14px 16px; margin-bottom:14px;
+    }
+    .intro ul{margin:.2em 0 0 1.1em}
+    .intro li{margin:.25em 0}
+
+    /* Map */
+    #map{
+      height:64vh; min-height:520px;
+      border-radius:calc(var(--radius) - 4px);
+      border:1px solid var(--border);
+      overflow:hidden;
+    }
+
+    /* Buttons */
+    .row{display:flex;gap:10px;align-items:center;margin:8px 0 16px}
+    .btn{
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:var(--panel-2);
+      color:var(--fg); padding:10px 12px;
+      cursor:pointer; font-weight:700;
+      transition:transform .04s ease, box-shadow .15s ease, border-color .2s ease;
+    }
+    .btn:hover{border-color:#3b4f78; box-shadow:0 6px 18px rgba(0,0,0,.25)}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{
+      background:linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+      color:#150a12; border:none;
+    }
+
+    /* Form */
+    form{display:grid; grid-template-columns:1fr; gap:12px}
+    label{font-size:13px; color:var(--muted)}
+    input,textarea{
+      width:100%; padding:14px 12px; border-radius:12px;
+      border:1px solid var(--border); background:var(--panel-2); color:var(--fg); font-size:15px;
+      outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    input::placeholder,textarea::placeholder{color:#7890b1}
+    input:focus-visible,textarea:focus-visible{border-color:#6a88ff; box-shadow:0 0 0 3px rgba(106,136,255,.18)}
+    textarea{min-height:120px; resize:vertical}
+
+    /* List */
+    .list{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px}
+    .adopt{background:var(--panel-2); border:1px dashed var(--border); border-radius:14px; padding:14px}
+    .adopt h3{margin:.2em 0; font-size:18px}
+    .meta{font-size:12px; color:var(--muted)}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(255,111,181,.12);
+      border:1px solid rgba(255,111,181,.25);
+      color:#ffd9ec; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700;
+    }
+
+    footer{margin:40px 0; color:#9aa5b2; text-align:center}
   </style>
 </head>
 <body>
@@ -50,6 +139,7 @@
     <div class="nav">
       <span class="logo">🐀</span>
       <span>Adopte un surmulot</span>
+      <span class="chip" style="margin-left:auto">Temps réel</span>
     </div>
   </header>
 
@@ -58,7 +148,7 @@
       <!-- Carte -->
       <section class="card"><div class="inner">
         <h1>Carte des surmulots</h1>
-        <p class="subtle">Clique sur la carte pour placer ton surmulot (optionnel) ou utilise ta position.</p>
+        <p class="subtle">Clique sur la carte pour placer ton surmulot (optionnel), ou utilise ta position.</p>
         <div class="row">
           <button id="geoloc" class="btn">📍 Me localiser</button>
           <small class="subtle">nécessite l’autorisation du navigateur</small>
@@ -66,24 +156,36 @@
         <div id="map"></div>
       </div></section>
 
-      <!-- Formulaire -->
+      <!-- Formulaire + Intro -->
       <section class="card"><div class="inner">
         <h2>Adopte un surmulot</h2>
-        <form id="adopt-form">
-          <label>Nom du surmulot
-            <input id="name" name="name" required placeholder="Ex. Frometon">
-          </label>
-          <label>Ton prénom
-            <input id="guardian" name="guardian" required placeholder="Ex. Guillaume">
-          </label>
-          <label>Petite histoire
-            <textarea id="story" name="story" placeholder="Ex. Rencontré près d’un square…"></textarea>
-          </label>
-          <label>Date d’adoption
-            <input id="date" name="adoption_date" type="date" required>
-          </label>
-          <input type="hidden" id="lat" name="lat"><input type="hidden" id="lng" name="lng">
-          <button class="btn btn-primary" type="submit">Adopter ce surmulot 🐀</button>
+
+        <!-- ✅ Petite intro rétablie -->
+        <div class="intro">
+          <strong>Comment ça marche :</strong>
+          <ul>
+            <li>🗺️ Clique sur la carte pour placer ton surmulot (ou utilise <em>Me localiser</em>)</li>
+            <li>📝 Remplis les informations de ton surmulot</li>
+            <li>✨ Il apparaît sur la carte et dans la liste pour toute la commu</li>
+          </ul>
+        </div>
+
+        <form id="adopt-form" autocomplete="off">
+          <label for="name">Nom du surmulot</label>
+          <input id="name" name="name" required placeholder="Ex. Frometon, Pistache, Ratatam…">
+
+          <label for="guardian">Ton prénom</label>
+          <input id="guardian" name="guardian" required placeholder="Ex. Guillaume">
+
+          <label for="story">Petite histoire (facultatif)</label>
+          <textarea id="story" name="story" placeholder="Ex. Rencontré près d’un square, préfère les croissants rassies."></textarea>
+
+          <label for="date">Date d’adoption</label>
+          <input id="date" name="adoption_date" type="date" required>
+
+          <input type="hidden" id="lat" name="lat">
+          <input type="hidden" id="lng" name="lng">
+          <button id="submit" class="btn btn-primary" type="submit">Adopter ce surmulot 🐀</button>
         </form>
       </div></section>
     </div>
@@ -100,92 +202,154 @@
   <!-- Libs -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <script>
   (function(){
-    const SUPABASE_URL="https://vfulbvhdbqmiehatvrfo.supabase.co";
-    const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmdWxidmhkYnFtaWVoYXR2cmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NDYzNjksImV4cCI6MjA3MjIyMjM2OX0.5m_0uGSsz8XNFyviA9rqqPPe4ZlqXsSqVJ-1JoxZerU";
-    const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+    /* ====== SUPABASE (tes valeurs) ====== */
+    const SUPABASE_URL = "https://vfulbvhdbqmiehatvrfo.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmdWxidmhkYnFtaWVoYXR2cmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NDYzNjksImV4cCI6MjA3MjIyMjM2OX0.5m_0uGSsz8XNFyviA9rqqPPe4ZlqXsSqVJ-1JoxZerU";
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const DEFAULT_CENTER=[48.8619,2.3790],DEFAULT_ZOOM=15;
-    let map,lastMarker=null,markersLayer,markersById=new Map();
+    /* ====== MAP ====== */
+    const DEFAULT_CENTER = [48.8619, 2.3790], DEFAULT_ZOOM = 15;
+    let map, lastMarker=null, markersLayer, markersById=new Map();
 
-    const EmojiIcon=L.divIcon({
-      html:"<div style='font-size:52px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))'>🐀</div>",
-      className:"",iconSize:[52,52],iconAnchor:[26,46],popupAnchor:[0,-36]
+    const EmojiIcon = L.divIcon({
+      html: "<div style='font-size:54px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))'>🐀</div>",
+      className: "", iconSize:[54,54], iconAnchor:[27,48], popupAnchor:[0,-40]
     });
 
     function setHiddenLatLng(lat,lng){
-      document.getElementById('lat').value=Number(lat).toFixed(6);
-      document.getElementById('lng').value=Number(lng).toFixed(6);
+      document.getElementById('lat').value = Number(lat).toFixed(6);
+      document.getElementById('lng').value = Number(lng).toFixed(6);
     }
-
     function placeTempMarker(lat,lng){
       if(lastMarker) map.removeLayer(lastMarker);
-      lastMarker=L.marker([lat,lng],{icon:EmojiIcon}).addTo(map).bindPopup("Emplacement choisi");
+      lastMarker = L.marker([lat,lng], {icon:EmojiIcon}).addTo(map).bindPopup("Emplacement choisi");
       lastMarker.openPopup();
       setHiddenLatLng(lat,lng);
     }
-
     function initMap(){
-      map=L.map('map',{scrollWheelZoom:true}).setView(DEFAULT_CENTER,DEFAULT_ZOOM);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
-      markersLayer=L.layerGroup().addTo(map);
-      map.on('click',e=>{const {lat,lng}=e.latlng; placeTempMarker(lat,lng);});
+      map = L.map('map', { scrollWheelZoom:true }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:"© OpenStreetMap" }).addTo(map);
+      markersLayer = L.layerGroup().addTo(map);
+      map.on('click', e=>{ const {lat,lng}=e.latlng; placeTempMarker(lat,lng); });
     }
 
-    // Bouton géoloc
+    // Géoloc
     document.addEventListener('click', (e)=>{
-      const btn=e.target.closest('#geoloc'); if(!btn) return;
+      const btn = e.target.closest('#geoloc'); if(!btn) return;
       if(!navigator.geolocation){ alert("Géolocalisation non supportée."); return; }
-      btn.disabled=true; btn.textContent="Recherche de la position…";
+      const old = btn.textContent; btn.disabled=true; btn.textContent="Recherche de la position…";
       navigator.geolocation.getCurrentPosition(pos=>{
-        const {latitude,longitude}=pos.coords;
-        map.setView([latitude,longitude], 16);
-        placeTempMarker(latitude,longitude);
-        btn.disabled=false; btn.textContent="📍 Me localiser";
+        const {latitude, longitude} = pos.coords;
+        map.setView([latitude, longitude], 16);
+        placeTempMarker(latitude, longitude);
+        btn.disabled=false; btn.textContent=old;
       }, err=>{
         alert("Impossible d’obtenir la position : " + err.message);
-        btn.disabled=false; btn.textContent="📍 Me localiser";
-      }, {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
+        btn.disabled=false; btn.textContent=old;
+      }, { enableHighAccuracy:true, timeout:10000, maximumAge:30000 });
     });
 
-    const escapeHtml=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-    const fmtDate=d=>new Date(d).toLocaleDateString('fr-FR');
-    const popupHtml=it=>`<b>${escapeHtml(it.name)}</b><br/>par ${escapeHtml(it.guardian)} • ${fmtDate(it.adoption_date)}${it.story?`<p style="margin:.5em 0 0">${escapeHtml(it.story)}</p>`:""}`;
-    const card=it=>`<article class="adopt"><h3>${escapeHtml(it.name)}</h3><div class="meta">par ${escapeHtml(it.guardian)} • ${fmtDate(it.adoption_date)}</div>${it.story?`<p>${escapeHtml(it.story)}</p>`:""}<button data-jump="${it.id}" class="btn btn-primary" style="margin-top:8px">Voir sur la carte</button></article>`;
+    /* ====== HELPERS ====== */
+    const $ = (sel)=>document.querySelector(sel);
+    const escapeHtml=(s)=> (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    const fmtDate = (d)=> new Date(d).toLocaleDateString('fr-FR');
+    const popupHtml = (it)=>{
+      const story = it.story ? `<p style="margin:.5em 0 0">${escapeHtml(it.story)}</p>` : "";
+      return `<b>${escapeHtml(it.name)}</b><br/>par ${escapeHtml(it.guardian)} • ${fmtDate(it.adoption_date)}${story}`;
+    };
+    const card = (it)=> {
+      const story = it.story ? `<p>${escapeHtml(it.story)}</p>` : "";
+      return `<article class="adopt">
+        <h3>${escapeHtml(it.name)}</h3>
+        <div class="meta">par ${escapeHtml(it.guardian)} • ${fmtDate(it.adoption_date)}</div>
+        ${story}
+        <button data-jump="${it.id}" class="btn" style="margin-top:8px">Voir sur la carte</button>
+      </article>`;
+    };
 
-    async function loadAll(){const {data,error}=await sb.from("adoptions").select("*").order("id",{ascending:false});if(error){console.error(error);return[]}return data}
-    async function saveOne(item){const {error}=await sb.from("adoptions").insert(item);if(error){console.error(error);alert(error.message)}}
+    /* ====== DATA ====== */
+    async function loadAll(){
+      const { data, error } = await sb.from("adoptions").select("*").order("id",{ascending:false});
+      if(error){ console.error(error); return []; }
+      return data;
+    }
+    async function saveOne(item){
+      const { error } = await sb.from("adoptions").insert(item);
+      if(error){ console.error(error); alert(error.message || "Erreur d'enregistrement"); return false; }
+      return true;
+    }
 
-    function render(items){
-      document.getElementById('adoptions').innerHTML=items.length?items.map(card).join(""):"<p class='subtle'>Aucune adoption</p>";
+    /* ====== RENDER ====== */
+    function renderList(items){
+      const host = document.getElementById('adoptions');
+      host.innerHTML = items.length ? items.map(card).join("") : "<p class='subtle'>Aucune adoption pour le moment…</p>";
+    }
+    function renderMarkers(items){
       markersLayer.clearLayers(); markersById.clear();
-      items.forEach(it=>{const m=L.marker([it.lat,it.lng],{icon:EmojiIcon}).addTo(markersLayer).bindPopup(popupHtml(it));markersById.set(String(it.id),m)});
-    }
-
-    function initForm(){
-      document.getElementById('date').valueAsDate=new Date();
-      document.getElementById('adopt-form').addEventListener("submit",async ev=>{
-        ev.preventDefault();
-        const fd=new FormData(ev.target);
-        let lat=fd.get("lat"),lng=fd.get("lng");
-        if(!lat||!lng){const c=map.getCenter();lat=c.lat;lng=c.lng;}
-        const item={name:fd.get("name").trim(),guardian:fd.get("guardian").trim(),story:(fd.get("story")||"").trim(),adoption_date:fd.get("adoption_date"),lat:parseFloat(lat),lng:parseFloat(lng)};
-        await saveOne(item);
-        ev.target.reset(); document.getElementById('date').valueAsDate=new Date(); setHiddenLatLng("",""); if(lastMarker){map.removeLayer(lastMarker); lastMarker=null;}
+      items.forEach(it=>{
+        const m = L.marker([it.lat, it.lng], {icon:EmojiIcon}).addTo(markersLayer).bindPopup(popupHtml(it));
+        markersById.set(String(it.id), m);
       });
-      document.getElementById('adoptions').addEventListener("click",e=>{const b=e.target.closest("button[data-jump]");if(!b)return;const m=markersById.get(b.dataset.jump);if(m){map.setView(m.getLatLng(),16);m.openPopup();}});
     }
 
+    /* ====== FORM ====== */
+    function initForm(){
+      document.getElementById('date').valueAsDate = new Date();
+      const $btn = document.getElementById('submit');
+
+      document.getElementById('adopt-form').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        $btn.disabled = true; const old = $btn.textContent; $btn.textContent = "Enregistrement…";
+
+        const fd = new FormData(ev.target);
+        let lat = fd.get("lat"), lng = fd.get("lng");
+        if(!lat || !lng){ const c = map.getCenter(); lat = c.lat; lng = c.lng; }
+
+        const item = {
+          name: fd.get("name").trim(),
+          guardian: fd.get("guardian").trim(),
+          story: (fd.get("story")||"").trim(),
+          adoption_date: fd.get("adoption_date"),
+          lat: parseFloat(lat), lng: parseFloat(lng)
+        };
+
+        const ok = await saveOne(item);
+        if(ok){
+          ev.target.reset(); document.getElementById('date').valueAsDate = new Date(); setHiddenLatLng("",""); if(lastMarker){map.removeLayer(lastMarker); lastMarker=null;}
+          // Realtime mettra à jour tout le monde; fallback léger si Realtime non activé:
+          setTimeout(async ()=>{ if(document.getElementById('adoptions').children.length===0){ const items=await loadAll(); renderList(items); renderMarkers(items); } }, 500);
+        }
+
+        $btn.disabled = false; $btn.textContent = old;
+      });
+
+      // Focus depuis la liste
+      document.getElementById('adoptions').addEventListener('click', e=>{
+        const b = e.target.closest('button[data-jump]'); if(!b) return;
+        const m = markersById.get(b.dataset.jump);
+        if(m){ map.setView(m.getLatLng(), 16); m.openPopup(); }
+      });
+    }
+
+    /* ====== REALTIME ====== */
     function initRealtime(){
-      sb.channel('adoptions-realtime').on('postgres_changes',{event:'INSERT',schema:'public',table:'adoptions'},async()=>{const items=await loadAll();render(items)}).subscribe();
+      sb.channel('adoptions-realtime')
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'adoptions' }, async ()=>{
+          const items = await loadAll();
+          renderList(items); renderMarkers(items);
+        })
+        .subscribe();
     }
 
-    window.addEventListener("load",async()=>{
+    /* ====== BOOT ====== */
+    window.addEventListener('load', async ()=>{
       initMap(); initForm();
-      const items=await loadAll(); render(items);
+      const items = await loadAll(); renderList(items); renderMarkers(items);
       initRealtime();
-      setTimeout(()=>map.invalidateSize(),120);
+      setTimeout(()=> map.invalidateSize(), 120);
     });
   })();
   </script>
